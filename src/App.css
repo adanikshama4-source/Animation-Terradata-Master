@@ -1,0 +1,90 @@
+/* .app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+header {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.globe-container {
+  flex: 3;
+  height: 100%;
+  position: relative;
+}
+
+.controls {
+  flex: 1;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.8);
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timeline-container {
+  margin-bottom: 1.5rem;
+}
+
+.timeline-container label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.timeline-container input[type="range"] {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #4b5563;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.timeline-container input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+.info-panel {
+  background: rgba(30, 41, 59, 0.7);
+  padding: 1rem;
+  border-radius: 8px;
+  color: #f1f5f9;
+  margin-top: 1rem;
+}
+
+.info-panel h3 {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-panel p {
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.info-panel small {
+  font-size: 0.8rem;
+  color: #94a3b8;
+} */

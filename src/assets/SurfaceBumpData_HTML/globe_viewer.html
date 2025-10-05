@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Global Land Cover Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 14px;
+            min-width: 80px;
+        }
+
+        select,
+        button,
+        input[type="range"] {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select {
+            flex: 1;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        input[type="range"] {
+            flex: 1;
+            padding: 0;
+        }
+
+        .legend {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px 50px;
+            border-radius: 10px;
+            z-index: 200;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div id="loading">Loading textures...</div>
+    <div id="info">
+        <h1>🌍 Global Land Cover 3D</h1>
+        <div class="controls">
+            <div class="control-group">
+                <label>Year:</label>
+                <select id="yearSelect"></select>
+            </div>
+            <div class="control-group">
+                <label>Rotation:</label>
+                <button id="toggleRotation">Pause</button>
+            </div>
+            <div class="control-group">
+                <label>Bump Scale:</label>
+                <input type="range" id="bumpScale" min="0" max="50" value="15" step="1">
+            </div>
+            <div class="control-group">
+                <label>Zoom:</label>
+                <input type="range" id="zoomLevel" min="150" max="400" value="250" step="10">
+            </div>
+        </div>
+        <div class="legend">
+            <strong>Legend:</strong>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgb(69, 117, 180);"></div>
+                <span>Water</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgb(34, 139, 34);"></div>
+                <span>Vegetation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgb(210, 180, 140);"></div>
+                <span>Land / Cropland</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgb(205, 92, 92);"></div>
+                <span>Urban</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgb(255, 255, 255);"></div>
+                <span>Snow / Ice / Barren</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const years = ["2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"];
+
+        let scene, camera, renderer, globe, isRotating = true;
+        let currentYear = years[0];
+
+        // Initialize Three.js scene
+        function init() {
+            const container = document.getElementById('container');
+
+            // Scene
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                45,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.z = 250;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 3, 5);
+            scene.add(directionalLight);
+
+            const backLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+            backLight.position.set(-5, -3, -5);
+            scene.add(backLight);
+
+            // Stars background
+            createStars();
+
+            // Load initial globe
+            loadGlobe(currentYear);
+
+            // Controls
+            setupControls();
+
+            // Animation loop
+            animate();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 2,
+                sizeAttenuation: true
+            });
+
+            const starsVertices = [];
+            for (let i = 0; i < 1000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+
+            starsGeometry.setAttribute('position',
+                new THREE.Float32BufferAttribute(starsVertices, 3));
+
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+
+        function loadGlobe(year) {
+            document.getElementById('loading').style.display = 'block';
+
+            // Remove existing globe
+            if (globe) {
+                scene.remove(globe);
+                globe.geometry.dispose();
+                globe.material.dispose();
+            }
+
+            const textureLoader = new THREE.TextureLoader();
+            const colorPath = `globe_color_${year}.png`;
+            const bumpPath = `globe_bump_${year}.png`;
+
+            let colorLoaded = false;
+            let bumpLoaded = false;
+
+            const colorTexture = textureLoader.load(colorPath, () => {
+                colorLoaded = true;
+                checkBothLoaded();
+            });
+
+            const bumpTexture = textureLoader.load(bumpPath, () => {
+                bumpLoaded = true;
+                checkBothLoaded();
+            });
+
+            function checkBothLoaded() {
+                if (colorLoaded && bumpLoaded) {
+                    createGlobe(colorTexture, bumpTexture);
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+        }
+
+        function createGlobe(colorTexture, bumpTexture) {
+            const geometry = new THREE.SphereGeometry(50, 128, 128);
+
+            const material = new THREE.MeshStandardMaterial({
+                map: colorTexture,
+                bumpMap: bumpTexture,
+                bumpScale: parseFloat(document.getElementById('bumpScale').value),
+                metalness: 0.1,
+                roughness: 0.8
+            });
+
+            globe = new THREE.Mesh(geometry, material);
+            globe.rotation.y = -Math.PI / 2; // Start with Americas facing
+            scene.add(globe);
+        }
+
+        function setupControls() {
+            const yearSelect = document.getElementById('yearSelect');
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+
+            yearSelect.addEventListener('change', (e) => {
+                currentYear = e.target.value;
+                loadGlobe(currentYear);
+            });
+
+            document.getElementById('toggleRotation').addEventListener('click', (e) => {
+                isRotating = !isRotating;
+                e.target.textContent = isRotating ? 'Pause' : 'Resume';
+            });
+
+            document.getElementById('bumpScale').addEventListener('input', (e) => {
+                if (globe) {
+                    globe.material.bumpScale = parseFloat(e.target.value);
+                }
+            });
+
+            document.getElementById('zoomLevel').addEventListener('input', (e) => {
+                camera.position.z = parseFloat(e.target.value);
+            });
+
+            // Mouse controls
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            renderer.domElement.addEventListener('mousedown', () => {
+                isDragging = true;
+            });
+
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging && globe) {
+                    const deltaMove = {
+                        x: e.offsetX - previousMousePosition.x,
+                        y: e.offsetY - previousMousePosition.y
+                    };
+
+                    globe.rotation.y += deltaMove.x * 0.01;
+                    globe.rotation.x += deltaMove.y * 0.01;
+
+                    // Clamp vertical rotation
+                    globe.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, globe.rotation.x));
+                }
+
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (globe && isRotating) {
+                globe.rotation.y += 0.001;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Start the application
+        init();
+    </script>
+</body>
+
+</html>
