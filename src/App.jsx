@@ -87,7 +87,7 @@ export default function App() {
         flexWrap: 'wrap'
       }}>
         {/* Left: Data Type Buttons */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', order: 1 }}>
           <button
             onClick={() => setSelectedDataType('land')}
             style={{
@@ -151,7 +151,7 @@ export default function App() {
         </div>
 
         {/* Center: Year Slider */}
-        <div style={{ maxWidth: '200px', minWidth: '150px' }}>
+        <div style={{ order: 2, flex: '1 1 100%', maxWidth: '900px', minWidth: '300px', margin: '0 auto' }}>
           <TimelineSlider 
             year={currentYear} 
             setYear={setCurrentYear} 
@@ -161,7 +161,7 @@ export default function App() {
         </div>
 
         {/* Right: Compact Info Panel */}
-        <div style={{ minWidth: '300px', maxWidth: '400px', flex: '1' }}>
+        <div style={{ minWidth: '300px', maxWidth: '400px', flex: '1', order: 3 }}>
           <InfoPanel 
             year={currentYear} 
             dataType={selectedDataType} 
