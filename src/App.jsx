@@ -85,7 +85,7 @@ export default function App() {
         flexWrap: 'wrap'
       }}>
         {/* Left: Data Type Buttons */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap',order:1 }}>
            <button
             onClick={() => setSelectedDataType('earth')}
             style={{
