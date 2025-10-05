@@ -9,7 +9,7 @@ const END_YEAR = 2024;
 
 export default function App() {
   const [currentYear, setCurrentYear] = useState(START_YEAR);
-  const [selectedDataType, setSelectedDataType] = useState('land'); // 'land', 'bump', 'atmosphere'
+  const [selectedDataType, setSelectedDataType] = useState('earth'); // 'land', 'bump', 'atmosphere'
   const [showLegend, setShowLegend] = useState(false);
 
   // Handle orbit completion - advance year when Earth completes one orbit
@@ -48,8 +48,6 @@ export default function App() {
       }}> 
         <EarthGlobe 
           currentYear={currentYear} 
-          startYear={START_YEAR}
-          endYear={END_YEAR}
           dataType={selectedDataType}
           onOrbitComplete={handleOrbitComplete}
         />
@@ -88,6 +86,21 @@ export default function App() {
       }}>
         {/* Left: Data Type Buttons */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+           <button
+            onClick={() => setSelectedDataType('earth')}
+            style={{
+              padding: '0.4rem 0.8rem',
+              backgroundColor: selectedDataType === 'earth' ? '#3b82f6' : 'rgba(59, 130, 246, 0.3)',
+              color: 'white',
+              border: '1px solid #3b82f6',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: '500'
+            }}
+          >
+            🌍 Earth
+          </button>
           <button
             onClick={() => setSelectedDataType('land')}
             style={{
@@ -101,7 +114,7 @@ export default function App() {
               fontWeight: '500'
             }}
           >
-            🌍 Land
+            ⛰️ Land
           </button>
           <button
             onClick={() => setSelectedDataType('bump')}
@@ -151,7 +164,7 @@ export default function App() {
         </div>
 
         {/* Center: Year Slider */}
-        <div style={{ maxWidth: '200px', minWidth: '150px' }}>
+          <div style={{ order: 2, flex: '1 1 100%', maxWidth: '500px', minWidth: '300px', margin: '0 auto' }}>
           <TimelineSlider 
             year={currentYear} 
             setYear={setCurrentYear} 
@@ -161,7 +174,7 @@ export default function App() {
         </div>
 
         {/* Right: Compact Info Panel */}
-        <div style={{ minWidth: '300px', maxWidth: '400px', flex: '1' }}>
+        <div style={{ minWidth: '300px', maxWidth: '400px', flex: '1' ,order: 3}}>
           <InfoPanel 
             year={currentYear} 
             dataType={selectedDataType} 

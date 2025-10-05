@@ -1,15 +1,15 @@
-import React, { useRef, Suspense } from 'react';
+import React, { useRef, Suspense, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stars, useTexture, Html,useGLTF } from '@react-three/drei';
+import { OrbitControls, Stars, useTexture, Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
+// --- CONSTANTS FOR THE SOLAR SYSTEM STRUCTURE ---
 const AU_DISTANCE = 15; 
-const ORBIT_ECCENTRICITY = 1.35;
+const ORBIT_ECCENTRICITY = 1.02;
 const ORBIT_TILT_Z = 15 * Math.PI / 180;
 const SUN_SIZE = 4;
 const EARTH_SIZE = 2;
 const MOON_SIZE = 0.5;
-const SATELLITE_SIZE = 0.00005;
 const SATELLITE_DISTANCE = 2.8;
 const MOON_DISTANCE = 3.5; 
 const EARTH_ORBIT_SPEED = 0.05; 
@@ -20,25 +20,31 @@ const SUN_SHIFT_X = -3;
 const SUN_COLOR_PATH = `/8k_sun_texture.jpg`;
 const MOON_COLOR_PATH = `/8k_moon_textures.jpg`;
 const SATELLITE_MODEL_PATH = `/Terra.glb`; 
-//const SUN_BUMP_PATH = "/textures/sun_bump.jpg";
 
+/**
+ * Component to draw the elliptical orbit line for Earth.
+ */
 function OrbitLine() {
     return (
         <mesh rotation-x={Math.PI / 2}
-            scale={[ORBIT_ECCENTRICITY, 1, 1]}> 
+              scale={[ORBIT_ECCENTRICITY, 1, 1]}> 
             <ringGeometry args={[AU_DISTANCE - 0.05, AU_DISTANCE + 0.05, 128]} />
             <meshBasicMaterial color={0x333333} side={THREE.DoubleSide} />
         </mesh>
     );
 }
 
+/**
+ * Sun component with Texture, Rotation, and Light Source.
+ */
 function Sun() {
     const sunRef = useRef(); 
     const [colorMap] = useTexture([SUN_COLOR_PATH]);
     
-     useFrame(() => {
+    // Sun's self-rotation (axial rotation)
+    useFrame(() => {
         if (sunRef.current) {
-            sunRef.current.rotation.y += SUN_ROTATION_SPEED;
+            sunRef.current.rotation.y += SUN_ROTATION_SPEED; 
         }
     });
 
@@ -47,17 +53,17 @@ function Sun() {
             <mesh>
                 <sphereGeometry args={[SUN_SIZE, 64, 64]} />
                 <meshStandardMaterial
-                    emissiveMap={colorMap}  
+                    emissiveMap={colorMap}  
                     color={0x000000} 
                     emissive={0xFFFFFF} 
                     emissiveIntensity={3.5} 
                 />
             </mesh>
             
-            {/* NEW: Main light source for the system (Sun's light) */}
             <pointLight 
-                intensity={10} 
+                intensity={12} // High intensity for proper Earth illumination
                 distance={1000}
+                position={[0, 0, 0]} 
                 color={0xffffff} 
                 decay={0.01} 
             />
@@ -65,10 +71,14 @@ function Sun() {
     );
 }
 
+/**
+ * Moon Mesh Component
+ */
 function Moon() {
     const moonRef = useRef();
     const [colorMap] = useTexture([MOON_COLOR_PATH]);
 
+    // Moon's self-rotation 
     useFrame(() => {
         if (moonRef.current) {
             moonRef.current.rotation.y += 0.005; 
@@ -105,11 +115,25 @@ function MoonOrbitAnimator() {
     );
 }
 
+/**
+ * Satellite Mesh Component (using a GLB model)
+ */
 function Satellite() {
+    // Note: useGLTF loads the model only once.
     const { scene } = useGLTF(SATELLITE_MODEL_PATH); 
     
+    // Small rotation on the model itself
+    useFrame(() => {
+        if (scene) {
+            scene.rotation.y += 0.02; 
+            scene.rotation.x += 0.01;
+        }
+    });
+    
+    // NOTE: The model's scale is fixed here.
     return (
-        <primitive object={scene} scale={SATELLITE_SIZE} />
+        // The scale is very small because it's orbiting the Earth mesh (size 2)
+        <primitive object={scene} scale={0.00005} /> 
     );
 }
 
@@ -132,90 +156,105 @@ function SatelliteOrbitAnimator() {
 }
 
 
-function Earth({ currentYear, dataType = 'land' }) {
+/**
+ * Earth component, handles textures and material switching based on dataType.
+ */
+function Earth({ currentYear, dataType = 'earth' }) { 
     const earthRef = useRef();
     const cloudsRef = useRef(); 
     const earthGroupRef = useRef();
+    const cloudTextureRef = useRef();
     
     const yearString = String(currentYear);
     
     const colorMapPath = `/LandCover_Output/land_cover_${yearString}.png`; 
     const bumpMapPath = `/SurfaceBumpData_HTML/globe_bump_${yearString}.png`; 
     const atmosphereMapPath = `/NASA_Atmosphere_Output/year_average_${yearString}.png`; 
+    const cloudMapPath = `clouds_texture.jpg`; 
 
-    const [colorMap, bumpMap, atmosphereMap] = useTexture([
+    // Add state to handle texture loading errors gracefully
+    const [textureLoadError, setTextureLoadError] = useState(false);
+
+    const [colorMap, bumpMap, atmosphereMap,cloudMap] = useTexture([
         colorMapPath,
         bumpMapPath,
-        atmosphereMapPath 
+        atmosphereMapPath,cloudMapPath 
     ], (textures) => {
         if (textures[1]) {
             textures[1].colorSpace = THREE.NoColorSpace;
         }
+        setTextureLoadError(false); // Reset error state on successful load
+    },
+    (error) => {
+         console.warn(`Earth texture loading failed for year ${currentYear}. Rendering solid color.`);
+         setTextureLoadError(true); 
     });
 
     useFrame(() => {
         if (earthRef.current) {
+            // Earth's axial rotation
             earthRef.current.rotation.y += 0.02; 
         }
         if (cloudsRef.current) {
-            cloudsRef.current.rotation.y += 0.0025; 
+            // Cloud layer rotation (slightly faster)
+            cloudsRef.current.rotation.y += 0.025; 
+        }
+          if (cloudTextureRef.current) {
+            // Cloud texture layer rotation (slightly different speed)
+            cloudTextureRef.current.rotation.y += 0.03; 
         }
     });
 
     const getMaterialProps = (map, bump = false) => {
-        if (!map) return {};
-        
+        // If texture failed to load, return an empty object, forcing the material to use solid color
+        if (!map || textureLoadError) return {                    
+        };
         return bump ? { bumpMap: map } : { map: map };
     };
-
+    
     const getEarthMaterial = () => {
-        switch (dataType) {
-            case 'bump':
                 return (
                     <meshStandardMaterial 
-                        color={0xFFFFFF} 
-                        {...getMaterialProps(bumpMap)}
-                        bumpScale={20} 
+
+                    color={0xFFFFFF} 
+                    {...getMaterialProps(colorMap)}
+                    {...getMaterialProps(bumpMap, true)}
+                    bumpScale={100} 
                     />
                 );
-            case 'atmosphere':
-                return (
-                    <meshStandardMaterial 
-                        color={0xFFFFFF} 
-                        {...getMaterialProps(atmosphereMap)}
-                        transparent={true}
-                        opacity={0.8}
-                    />
-                );
-            case 'land':
-            default:
-                return (
-                    <meshStandardMaterial 
-                        color={0xFFFFFF} 
-                        {...getMaterialProps(colorMap)}
-                        {...getMaterialProps(bumpMap, true)}
-                        bumpScale={10} 
-                    />
-                );
-        }
+    };  
+
+     const getBumpMaterial = () => {
+        // This mesh is the cloud layer that sits slightly above the main Earth mesh.
+        return (
+            <meshPhongMaterial
+                {...getMaterialProps(bumpMap)}
+                {...getMaterialProps(bumpMap, true)}
+                bumpScale={100} 
+                color={0xFFFFFF} 
+            />
+        );
+    };
+
+        const getCloudTextureMaterial = () => {
+        return (
+            <meshStandardMaterial
+                map={cloudMap} // Use the atmosphere map for the cloud texture
+                color={0xFFFFFF} 
+                transparent={true}
+                opacity={0.8} // Visible clouds, slightly transparent
+                blending={THREE.NormalBlending} // Standard blending for visible clouds
+            />
+        );
     };
 
     const getAtmosphereMaterial = () => {
-        if (dataType === 'atmosphere') {
-            return (
-                <meshPhongMaterial
-                    {...getMaterialProps(atmosphereMap)}
-                    transparent={true}
-                    opacity={0.3}
-                    side={THREE.BackSide} 
-                    blending={THREE.AdditiveBlending}
-                />
-            );
-        }
+        // This mesh is the cloud layer that sits slightly above the main Earth mesh.
         return (
             <meshPhongMaterial
                 {...getMaterialProps(atmosphereMap)}
-                transparent={true}
+                color={0xFFFFFF} 
+                transparent={true}       
                 opacity={0.65}
                 side={THREE.BackSide} 
                 blending={THREE.AdditiveBlending}
@@ -224,17 +263,53 @@ function Earth({ currentYear, dataType = 'land' }) {
     };
 
     return (
+        // Tilt the Earth on its axis (23.4 degrees)
         <group ref={earthGroupRef} rotation-z={-23.5 * Math.PI / 180}>
-            
-            <mesh ref={earthRef} position={[0, 0, 0]}>
+               {dataType == 'earth' && (
+                <>
+                    {/* Main Earth Surface Mesh */}
+                    <mesh ref={earthRef} position={[0, 0, 0]}> 
+                        <sphereGeometry args={[EARTH_SIZE, 64, 64]} /> 
+                        {getEarthMaterial()}
+                    </mesh>
+                     <mesh ref={cloudTextureRef} position={[0, 0, 0]} scale={2.006}> 
+                        <sphereGeometry args={[1, 64, 64]} />
+                        {getCloudTextureMaterial()}
+                    </mesh>
+                    {/* atmosphere Layer Mesh */}
+                    <mesh ref={cloudsRef} position={[0, 0, 0]} scale={2.05}> 
+                        <sphereGeometry args={[1, 64, 64]} />
+                        {getAtmosphereMaterial()}
+                    </mesh>
+                </>
+            )}
+
+            {dataType == 'land' && (
+                <>
+                    {/* Main Earth Surface Mesh */}
+                    <mesh ref={earthRef} position={[0, 0, 0]}> 
+                        <sphereGeometry args={[EARTH_SIZE, 64, 64]} /> 
+                        {getEarthMaterial()}
+                    </mesh>
+                     
+                </>
+            )}
+
+{dataType == 'bump' && (
+            <mesh ref={earthRef} position={[0, 0, 0]}> 
                 <sphereGeometry args={[EARTH_SIZE, 64, 64]} /> 
-                {getEarthMaterial()}
+                {getBumpMaterial()}
             </mesh>
+            )}
+
+            {dataType 
+            == 'atmosphere' && (
+                <mesh ref={cloudsRef} position={[0, 0, 0]} scale={2.05}>
+                    <sphereGeometry args={[1, 64, 64]} />
+                    {getAtmosphereMaterial()}
+                </mesh>
+            )}
             
-            <mesh ref={cloudsRef} position={[0, 0, 0]} scale={2.05}>
-                <sphereGeometry args={[1, 64, 64]} />
-                {getAtmosphereMaterial()}
-            </mesh>
             <MoonOrbitAnimator />
             <SatelliteOrbitAnimator /> 
 
@@ -242,21 +317,25 @@ function Earth({ currentYear, dataType = 'land' }) {
     );
 }
 
-function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete }) {
+/**
+ * Encapsulates the Earth's orbital movement logic using useFrame and orbital tracking.
+ */
+function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete }) { 
     const earthOrbitRef = useRef(); 
     const lastOrbitTime = useRef(0);
     const orbitCount = useRef(0);
     
+    // Calculates elliptical orbit position and detects orbit completion
     useFrame(({ clock }) => {
         if (earthOrbitRef.current) {
-          const t = clock.getElapsedTime() * EARTH_ORBIT_SPEED;
+            const t = clock.getElapsedTime() * EARTH_ORBIT_SPEED;
             
             const x = AU_DISTANCE * ORBIT_ECCENTRICITY * Math.cos(t);
-            const z = AU_DISTANCE * Math.sin(t);
-
+            const z = AU_DISTANCE * ORBIT_ECCENTRICITY * Math.sin(t); 
+            
             earthOrbitRef.current.position.x = x;
             earthOrbitRef.current.position.z = z;
-            
+
             // Track orbit completion (when t completes a full 2π cycle)
             const currentOrbitTime = Math.floor(t / (2 * Math.PI));
             if (currentOrbitTime > lastOrbitTime.current) {
@@ -270,66 +349,49 @@ function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete }) {
             }
         }
     });
-
+    
     return (
         <group ref={earthOrbitRef}>
             <group position={[0, 0, 0]}> 
-                <Earth currentYear={currentYear} dataType={dataType} />
-                {/* SATELLITE  */}
+                <Earth currentYear={currentYear} dataType={dataType} /> 
             </group>
         </group>
     );
 }
 
 
-export default function EarthGlobe({ currentYear, startYear, endYear, dataType = 'land', onOrbitComplete }) {
-    const earthOrbitRef = useRef(); 
-    //  useFrame(({ clock }) => {
-    //     if (earthOrbitRef.current) {
-    //         earthOrbitRef.current.rotation.y = clock.getElapsedTime() * EARTH_ORBIT_SPEED;
-    //     }
-    // });
+/**
+ * Main application component.
+ */
+export default function EarthGlobe({ currentYear, dataType = 'earth', onOrbitComplete }) {
     
     return (
         <Canvas 
-            camera={{ position: [AU_DISTANCE + SUN_SHIFT_X + 1,2,5], fov: 50 }} 
+            camera={{ position: [AU_DISTANCE + SUN_SHIFT_X + 1, 2, 5], fov: 50 }} 
             style={{ background: '#000000' }}
         >
             <Suspense fallback={<Html center className="text-white">Loading Solar System Data...</Html>}>
                 
-                {/* <directionalLight 
-                    position={[-9, 0, 0]} 
-                    intensity={5}        
-                    color={0xffffee} 
-                /> */}
-                <Sun />
-                 <group rotation-z={ORBIT_TILT_Z}>
-                 
-                <OrbitLine />
+                {/* Master group to tilt the entire solar system plane */}
+                <group rotation-x={ORBIT_TILT_Z}> 
+                    <Sun />
+                    <OrbitLine /> 
+                    <EarthOrbitAnimator 
+                        currentYear={currentYear} 
+                        dataType={dataType} 
+                        onOrbitComplete={onOrbitComplete}
+                    /> 
+                </group>
 
-                <EarthOrbitAnimator 
-                    currentYear={currentYear} 
-                    dataType={dataType} 
-                    onOrbitComplete={onOrbitComplete}
-                />
-                 </group>
-            
-                <ambientLight intensity={0.05} />
-
-                {/* <group ref={earthOrbitRef}>
-                    <group position={[AU_DISTANCE, 0, 0]}>
-                        <Earth currentYear={currentYear} />
-                        {/*   MOON  
-                        {/* SATELLITE  
-                    </group>
-                </group> */}
+                <ambientLight intensity={0.5} /> 
                 
-                <Stars radius={200} depth={100} count={10000} factor={8} saturation={0.8} fade speed={1.5} />                 
+                <Stars radius={200} depth={100} count={10000} factor={8} saturation={0.8} fade speed={1.5} /> 
+                
                 <OrbitControls 
                     enableZoom={true} 
                     enablePan={false} 
                     maxDistance={AU_DISTANCE + 25}
-                    minDistance={2}
+                    minDistance={2} 
                     enableDamping={true} 
                     dampingFactor={0.05} 
                 />
