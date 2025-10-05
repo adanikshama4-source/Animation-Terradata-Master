@@ -1,5 +1,5 @@
 import React, { useRef, Suspense, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame,useThree } from '@react-three/fiber';
 import { OrbitControls, Stars, useTexture, Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -53,7 +53,7 @@ function Sun() {
             <mesh>
                 <sphereGeometry args={[SUN_SIZE, 64, 64]} />
                 <meshStandardMaterial
-                    emissiveMap={colorMap}  
+                    emissiveMap={colorMap}
                     color={0x000000} 
                     emissive={0xFFFFFF} 
                     emissiveIntensity={3.5} 
@@ -61,11 +61,11 @@ function Sun() {
             </mesh>
             
             <pointLight 
-                intensity={12} // High intensity for proper Earth illumination
-                distance={1000}
+                intensity={10} // High intensity for proper Earth illumination
+                distance={100}
                 position={[0, 0, 0]} 
-                color={0xffffff} 
-                decay={0.01} 
+                color={0xFFFFFF} 
+                decay={0.1} 
             />
         </group>
     );
@@ -159,7 +159,7 @@ function SatelliteOrbitAnimator() {
 /**
  * Earth component, handles textures and material switching based on dataType.
  */
-function Earth({ currentYear, dataType = 'earth' }) { 
+function Earth({ currentYear, dataType = 'earth',onEarthClick ,isFocused }) { 
     const earthRef = useRef();
     const cloudsRef = useRef(); 
     const earthGroupRef = useRef();
@@ -264,11 +264,29 @@ function Earth({ currentYear, dataType = 'earth' }) {
 
     return (
         // Tilt the Earth on its axis (23.4 degrees)
-        <group ref={earthGroupRef} rotation-z={-23.5 * Math.PI / 180}>
+        <group ref={earthGroupRef} rotation-z={-23.4 * Math.PI / 180}>
+
+                {!isFocused && (
+                        <Html position={[0, EARTH_SIZE + 0.5, 0]} center>
+                            <div style={{
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                color: 'white',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                whiteSpace: 'nowrap',
+                                animation: 'pulse 1.5s infinite' // Optional: for attention
+                            }}>
+                                Click to Focus! 🖱️
+                            </div>
+                        </Html>
+                    )}
+                    
+
                {dataType == 'earth' && (
                 <>
                     {/* Main Earth Surface Mesh */}
-                    <mesh ref={earthRef} position={[0, 0, 0]}> 
+                    <mesh ref={earthRef} position={[0, 0, 0]} onClick={onEarthClick}> 
                         <sphereGeometry args={[EARTH_SIZE, 64, 64]} /> 
                         {getEarthMaterial()}
                     </mesh>
@@ -287,7 +305,7 @@ function Earth({ currentYear, dataType = 'earth' }) {
             {dataType == 'land' && (
                 <>
                     {/* Main Earth Surface Mesh */}
-                    <mesh ref={earthRef} position={[0, 0, 0]}> 
+                    <mesh ref={earthRef} position={[0, 0, 0]} onClick={onEarthClick}> 
                         <sphereGeometry args={[EARTH_SIZE, 64, 64]} /> 
                         {getEarthMaterial()}
                     </mesh>
@@ -296,7 +314,7 @@ function Earth({ currentYear, dataType = 'earth' }) {
             )}
 
 {dataType == 'bump' && (
-            <mesh ref={earthRef} position={[0, 0, 0]}> 
+            <mesh ref={earthRef} position={[0, 0, 0]} onClick={onEarthClick}> 
                 <sphereGeometry args={[EARTH_SIZE, 64, 64]} /> 
                 {getBumpMaterial()}
             </mesh>
@@ -304,7 +322,7 @@ function Earth({ currentYear, dataType = 'earth' }) {
 
             {dataType 
             == 'atmosphere' && (
-                <mesh ref={cloudsRef} position={[0, 0, 0]} scale={2.05}>
+                <mesh ref={cloudsRef} position={[0, 0, 0]} scale={2.05} onClick={onEarthClick}>
                     <sphereGeometry args={[1, 64, 64]} />
                     {getAtmosphereMaterial()}
                 </mesh>
@@ -320,7 +338,7 @@ function Earth({ currentYear, dataType = 'earth' }) {
 /**
  * Encapsulates the Earth's orbital movement logic using useFrame and orbital tracking.
  */
-function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete }) { 
+function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete, onEarthClick }) { 
     const earthOrbitRef = useRef(); 
     const lastOrbitTime = useRef(0);
     const orbitCount = useRef(0);
@@ -353,9 +371,55 @@ function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete }) {
     return (
         <group ref={earthOrbitRef}>
             <group position={[0, 0, 0]}> 
-                <Earth currentYear={currentYear} dataType={dataType} /> 
+                <Earth currentYear={currentYear} dataType={dataType} onEarthClick={onEarthClick} /> 
             </group>
         </group>
+    );
+}
+
+function CameraFocusController({ targetPosition, isFocusedRef }) {
+    const controlsRef = useRef();
+    const { camera } = useThree();
+
+    useFrame(() => {
+        if (controlsRef.current) {
+            // Smoothly interpolate the controls target to the new position
+            controlsRef.current.target.lerp(targetPosition, 0.1); 
+            controlsRef.current.update();
+            
+            // Optional: When focused, smoothly move the camera closer if it's too far
+            if (isFocusedRef.current) {
+                 // Define a target camera position closer to the Earth
+                 const targetCamPos = targetPosition.clone().add(new THREE.Vector3(5, 2, 5));
+                 const currentDistance = camera.position.distanceTo(targetPosition);
+
+                 // If current distance is too large, move camera closer for an initial 'zoom' feeling
+                 if (currentDistance > 10) {
+                     camera.position.lerp(targetCamPos, 0.05);
+                 }
+            } else {
+                // If unfocused (on Sun), ensure camera is far enough to see the orbit
+                 const sunTarget = new THREE.Vector3(SUN_SHIFT_X, 0, 0);
+                 const currentDistance = camera.position.distanceTo(sunTarget);
+                 
+                 // If the camera is too close to the sun target, pull it back to the initial view distance
+                 if (currentDistance < 20) {
+                      camera.position.lerp(new THREE.Vector3(AU_DISTANCE + SUN_SHIFT_X + 1, 2, 5), 0.01);
+                 }
+            }
+        }
+    });
+
+    return (
+        <OrbitControls 
+            ref={controlsRef} // Get ref to controls
+            enableZoom={true} 
+            enablePan={false} 
+            maxDistance={AU_DISTANCE + 25}
+            minDistance={2} 
+            enableDamping={true} 
+            dampingFactor={0.05} 
+        />
     );
 }
 
@@ -363,8 +427,30 @@ function EarthOrbitAnimator({ currentYear, dataType, onOrbitComplete }) {
 /**
  * Main application component.
  */
-export default function EarthGlobe({ currentYear, dataType = 'earth', onOrbitComplete }) {
+export default function EarthGlobe({ currentYear, dataType = 'earth', onOrbitComplete ,overlayMessage}) {
     
+    const defaultTarget = new THREE.Vector3(SUN_SHIFT_X, 0, 0);
+    const [targetPosition, setTargetPosition] = useState(defaultTarget); 
+    const isFocusedRef = useRef(false); // Use ref to avoid re-rendering on every focus toggle
+
+    const handleEarthClick = (event) => {
+        // Stop event propagation to prevent it from triggering other listeners if any
+        event.stopPropagation();
+        
+        // Get the absolute world position of the clicked Earth mesh
+        const earthWorldPosition = new THREE.Vector3();
+        event.object.getWorldPosition(earthWorldPosition); 
+
+        // Toggle focus logic
+        if (isFocusedRef.current) {
+            setTargetPosition(defaultTarget); // Go back to Sun
+            isFocusedRef.current = false;
+        } else {
+            setTargetPosition(earthWorldPosition); // Focus on Earth
+            isFocusedRef.current = true;
+        }
+    };
+
     return (
         <Canvas 
             camera={{ position: [AU_DISTANCE + SUN_SHIFT_X + 1, 2, 5], fov: 50 }} 
@@ -380,22 +466,37 @@ export default function EarthGlobe({ currentYear, dataType = 'earth', onOrbitCom
                         currentYear={currentYear} 
                         dataType={dataType} 
                         onOrbitComplete={onOrbitComplete}
+                        onEarthClick={handleEarthClick} // Pass the click handler
+
                     /> 
                 </group>
+                {overlayMessage && (
+                    <Html center fullscreen zIndexRange={[100, 0]}>
+                        <div style={{
+                            fontSize: '2rem',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            padding: '1rem 2rem',
+                            borderRadius: '10px',
+                            // Simple fade-in/fade-out animation for visibility
+                            animation: 'fade-in 0.5s, fade-out 0.5s 1.5s forwards', 
+                            opacity: 0,
+                            pointerEvents: 'none' // Ensures users can still interact with the scene
+                        }}>
+                            {overlayMessage}
+                        </div>
+                    </Html>
+                )}
 
                 <ambientLight intensity={0.5} /> 
                 
                 <Stars radius={200} depth={100} count={10000} factor={8} saturation={0.8} fade speed={1.5} /> 
                 
-                <OrbitControls 
-                    enableZoom={true} 
-                    enablePan={false} 
-                    maxDistance={AU_DISTANCE + 25}
-                    minDistance={2} 
-                    enableDamping={true} 
-                    dampingFactor={0.05} 
+                <CameraFocusController 
+                    targetPosition={targetPosition} 
+                    isFocusedRef={isFocusedRef} 
                 />
-                
             </Suspense>
         </Canvas>
     );

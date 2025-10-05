@@ -46,15 +46,15 @@ export default function TimelineSlider({ year, setYear, startYear, endYear }) {
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${endYear - startYear + 1}, 1fr)`, gap: '0px', alignItems: 'start', marginTop: '6px' }}>
         {Array.from({ length: endYear - startYear + 1 }).map((_, idx) => {
           const y = startYear + idx;
-          const showLabel = (y === startYear) || (y === endYear) || (y % 1 === 0);
+         // const showLabel = (y === startYear) || (y === endYear) || (y % 1 === 0);
           return (
             <div key={y} style={{ textAlign: 'center' }}>
               <div style={{ height: '6px', width: '1px', background: '#9ca3af', margin: '0 auto' }} />
-              {showLabel && (
+              {/* {showLabel && (
                 <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px', transform: 'rotate(0deg)' }}>
                   {y}
                 </div>
-              )}
+              )} */}
             </div>
           );
         })}

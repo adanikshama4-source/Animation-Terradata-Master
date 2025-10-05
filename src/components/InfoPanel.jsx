@@ -27,70 +27,75 @@ export default function InfoPanel({ year, dataType, showLegend }) {
       2024: "Global reforestation efforts show early success."
     };
 
-    const dataTypeInfo = {
-      land: {
-        title: "🌍 Land Cover Data",
+const dataTypeInfo = {
+    earth: {
+        title: "🌍 Combined Earth View",
+        description: "Land Cover, Bump, and Atmosphere combined.",
+        details: "The full planet view, showcasing all three datasets simultaneously."
+    },
+    land: {
+        title: "🌍 Land Cover Data (Colourful)", // 👈 Added 'Colourful' cue
         description: "MODIS MCD12Q1 Land Cover Type",
-        details: "Shows vegetation types, urban areas, water bodies, and barren land"
-      },
-      bump: {
-        title: "🏔️ Surface Bump Data", 
+        details: "Shows vegetation types, urban areas, water bodies, and barren land."
+    },
+    bump: {
+        title: "🏔️ Surface Bump Data (Black/White)", // 👈 Added 'Black/White' cue
         description: "Topographic Surface Elevation",
-        details: "Displays terrain elevation and surface roughness"
-      },
-      atmosphere: {
-        title: "🌫️ Atmosphere Data",
+        details: "Displays terrain elevation and surface roughness."
+    },
+    atmosphere: {
+        title: "🌫️ Atmosphere Data (Transparent/White)", // 👈 Added 'Transparent/White' cue
         description: "NASA Atmosphere Composition",
-        details: "Shows atmospheric conditions and composition over time"
-      }
-    };
+        details: "Shows atmospheric conditions and composition over time."
+    }
+};
 
-    const legends = {
-      land: {
-        title: "Land Cover Legend",
-        items: [
-          { color: "#006400", label: "Evergreen Needleleaf Forest" },
-          { color: "#228B22", label: "Evergreen Broadleaf Forest" },
-          { color: "#8FBC8F", label: "Deciduous Needleleaf Forest" },
-          { color: "#32CD32", label: "Deciduous Broadleaf Forest" },
-          { color: "#9ACD32", label: "Mixed Forest" },
-          { color: "#FFFF00", label: "Grasslands" },
-          { color: "#FFD700", label: "Savannas" },
-          { color: "#DAA520", label: "Shrublands" },
-          { color: "#8B4513", label: "Woody Savannas" },
-          { color: "#A0522D", label: "Croplands" },
-          { color: "#FF6347", label: "Urban Areas" },
-          { color: "#0000FF", label: "Water Bodies" },
-          { color: "#F5F5DC", label: "Barren Land" }
-        ]
-      },
-      bump: {
-        title: "Surface Elevation Legend",
-        items: [
-          { color: "#000080", label: "Deep Ocean (-4000m)" },
-          { color: "#0000FF", label: "Ocean (-2000m)" },
-          { color: "#00FFFF", label: "Sea Level (0m)" },
-          { color: "#00FF00", label: "Lowlands (500m)" },
-          { color: "#FFFF00", label: "Hills (1000m)" },
-          { color: "#FF8000", label: "Mountains (2000m)" },
-          { color: "#FF0000", label: "High Mountains (4000m)" },
-          { color: "#800080", label: "Peaks (6000m+)" }
-        ]
-      },
-      atmosphere: {
-        title: "Atmosphere Composition Legend",
-        items: [
-          { color: "#000080", label: "Low Aerosol Density" },
-          { color: "#0000FF", label: "Moderate Aerosol" },
-          { color: "#00FFFF", label: "Normal Conditions" },
-          { color: "#00FF00", label: "Elevated Particles" },
-          { color: "#FFFF00", label: "High Aerosol" },
-          { color: "#FF8000", label: "Very High Density" },
-          { color: "#FF0000", label: "Extreme Conditions" },
-          { color: "#800080", label: "Critical Levels" }
-        ]
-      }
+  const legends = {
+        land: {
+            title: "Land Cover Legend (MODIS MCD12Q1)",
+            items: [
+                { color: "#4575b4", label: "Water" },                          // (69, 117, 180) - Slate Blue
+                { color: "#006400", label: "Evergreen Needleleaf/Broadleaf" }, // (0, 100, 0) - Dark Green
+                { color: "#228B22", label: "Deciduous Needleleaf/Broadleaf" }, // (34, 139, 34) - Forest Green
+                { color: "#00CD00", label: "Mixed Forests" },                  // (0, 205, 0) - Lime Green
+                { color: "#8B4513", label: "Closed Shrublands" },              // (139, 69, 19) - Brown
+                { color: "#CD853F", label: "Open Shrublands" },                // (205, 133, 63) - Peru
+                { color: "#FFA500", label: "Woody Savannas" },                 // (255, 165, 0) - Orange
+                { color: "#FFD700", label: "Savannas" },                       // (255, 215, 0) - Gold
+                { color: "#FFFF00", label: "Grasslands" },                     // (255, 255, 0) - Yellow
+                { color: "#6495ED", label: "Permanent Wetlands" },             // (100, 149, 237) - Cornflower Blue
+                { color: "#FF69B4", label: "Croplands" },                      // (255, 105, 180) - Hot Pink
+                { color: "#CD5C5C", label: "Urban and Built-up" },             // (205, 92, 92) - Indian Red
+                { color: "#FFC0CB", label: "Crop/Natural Veg. Mosaics" },      // (255, 192, 203) - Pink
+                { color: "#F0F8FF", label: "Permanent Snow and Ice" },         // (240, 248, 255) - Ghost White
+                { color: "#A0522D", label: "Barren Land" }                     // (160, 82, 45) - Sienna
+            ]
+        },
+        bump: {
+            title: "Surface Elevation Legend (Relative Intensity)",
+            items: [
+                { color: "#000000", label: "Black (Ocean/Missing Data)" },
+                { color: "#444444", label: "Dark Gray (Low Elevation/Intensity)" },
+                { color: "#888888", label: "Medium Gray (Moderate Elevation/Intensity)" },
+                { color: "#CCCCCC", label: "Light Gray (High Elevation/Intensity)" },
+                { color: "#FFFFFF", label: "White (Highest Elevation/Intensity)" },
+            ]
+        },
+        atmosphere: {
+            title: "Atmosphere Legend (Aerosol/Cloud/Ozone)",
+            items: [
+                { color: "#0000FF", label: "Dark Blue (Very Low Values)" },
+                { color: "#0080FF", label: "Light Blue (Low Values)" },
+                { color: "#00FFFF", label: "Cyan (Below Average)" },
+                { color: "#00FF00", label: "Green (Average Values)" },
+                { color: "#80FF00", label: "Yellow-Green (Above Average)" },
+                { color: "#FFFF00", label: "Yellow (High Values)" },
+                { color: "#FF8000", label: "Orange (Very High Values)" },
+                { color: "#FF0000", label: "Red (Highest Values)" },
+            ]
+        }
     };
+    
   
     return (
       <div style={{

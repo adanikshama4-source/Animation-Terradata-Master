@@ -11,6 +11,18 @@ export default function App() {
   const [currentYear, setCurrentYear] = useState(START_YEAR);
   const [selectedDataType, setSelectedDataType] = useState('earth'); // 'land', 'bump', 'atmosphere'
   const [showLegend, setShowLegend] = useState(false);
+  const [displayMessage, setDisplayMessage] = useState(null); 
+
+  // Function to handle data type change and set the message
+  const handleDataTypeChange = (dataType, message) => {
+    setSelectedDataType(dataType);
+    setDisplayMessage(message);
+    
+    // Clear the message after a short duration (e.g., 2 seconds)
+    setTimeout(() => {
+      setDisplayMessage(null);
+    }, 2000); 
+  };
 
   // Handle orbit completion - advance year when Earth completes one orbit
   const handleOrbitComplete = (orbitCount) => {
@@ -50,6 +62,7 @@ export default function App() {
           currentYear={currentYear} 
           dataType={selectedDataType}
           onOrbitComplete={handleOrbitComplete}
+          overlayMessage={displayMessage}
         />
       </div>
 
@@ -87,8 +100,8 @@ export default function App() {
         {/* Left: Data Type Buttons */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap',order:1 }}>
            <button
-            onClick={() => setSelectedDataType('earth')}
-            style={{
+            onClick={() => handleDataTypeChange('earth', '🌍 COMBINED EARTH VIEW')}           title="Default View: Shows Land Cover, Cloud Texture, and Atmosphere layers together." // 👈 Added Tooltip
+           style={{
               padding: '0.4rem 0.8rem',
               backgroundColor: selectedDataType === 'earth' ? '#3b82f6' : 'rgba(59, 130, 246, 0.3)',
               color: 'white',
@@ -102,7 +115,8 @@ export default function App() {
             🌍 Earth
           </button>
           <button
-            onClick={() => setSelectedDataType('land')}
+          onClick={() => handleDataTypeChange('land', '⛰️ LAND COVER (COLOURFUL)')} 
+            title="Land Cover: View the colorful MODIS vegetation and surface types only (no elevation)." // 👈 Added Tooltip
             style={{
               padding: '0.4rem 0.8rem',
               backgroundColor: selectedDataType === 'land' ? '#3b82f6' : 'rgba(59, 130, 246, 0.3)',
@@ -117,7 +131,7 @@ export default function App() {
             ⛰️ Land
           </button>
           <button
-            onClick={() => setSelectedDataType('bump')}
+onClick={() => handleDataTypeChange('bump', '🏔️ SURFACE BUMP (BLACK & WHITE)')}            title="Atmosphere: View the transparent layer showing air quality, cloud, or ozone data." // 👈 Added Tooltip
             style={{
               padding: '0.4rem 0.8rem',
               backgroundColor: selectedDataType === 'bump' ? '#3b82f6' : 'rgba(59, 130, 246, 0.3)',
@@ -132,7 +146,7 @@ export default function App() {
             🏔️ Bump
           </button>
           <button
-            onClick={() => setSelectedDataType('atmosphere')}
+            onClick={() => handleDataTypeChange('atmosphere', '🌫️ ATMOSPHERE (TRANSPARENT LAYER)')}             title="Show/Hide the detailed data legend for the selected type." // 👈 Added Tooltip
             style={{
               padding: '0.4rem 0.8rem',
               backgroundColor: selectedDataType === 'atmosphere' ? '#3b82f6' : 'rgba(59, 130, 246, 0.3)',
