@@ -1,41 +1,63 @@
 // src/components/TimelineSlider.jsx
-import { useState } from 'react';
 
-export default function TimelineSlider({ year, setYear }) {
-  const minYear = 2001;
-  const maxYear = 2024;
+export default function TimelineSlider({ year, setYear, startYear, endYear }) {
+  const handleChange = (e) => {
+    setYear(Number(e.target.value));
+  };
+
+  const handleRelease = () => {
+    if (year >= endYear) {
+      setYear(startYear);
+    }
+  };
 
   return (
     <div style={{ 
-      marginBottom: '1.5rem',
+      marginBottom: '1rem',
       background: 'rgba(0, 0, 0, 0.3)',
-      padding: '1rem',
+      padding: '1rem 1.25rem',
       borderRadius: '8px',
       backdropFilter: 'blur(10px)'
     }}>
-      <label style={{ color: 'white', fontSize: '1rem' }}>
+      <label style={{ color: 'white', fontSize: '1.1rem' }}>
         <strong>Year:</strong> {year}
       </label>
       <input
         type="range"
-        min={minYear}
-        max={maxYear}
+        min={startYear}
+        max={endYear}
         value={year}
-        onChange={(e) => setYear(Number(e.target.value))}
+        onChange={handleChange}
+        onMouseUp={handleRelease}
+        onTouchEnd={handleRelease}
+        onKeyUp={handleRelease}
         style={{
           width: '100%',
-          height: '8px',
-          borderRadius: '4px',
+          height: '12px',
+          borderRadius: '6px',
           background: '#4b5563',
           outline: 'none',
-          marginTop: '8px',
+          marginTop: '10px',
           WebkitAppearance: 'none',
           appearance: 'none'
         }}
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-        <span>{minYear}</span>
-        <span>{maxYear}</span>
+      {/* Dense year ticks */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${endYear - startYear + 1}, 1fr)`, gap: '0px', alignItems: 'start', marginTop: '6px' }}>
+        {Array.from({ length: endYear - startYear + 1 }).map((_, idx) => {
+          const y = startYear + idx;
+          const showLabel = (y === startYear) || (y === endYear) || (y % 1 === 0);
+          return (
+            <div key={y} style={{ textAlign: 'center' }}>
+              <div style={{ height: '6px', width: '1px', background: '#9ca3af', margin: '0 auto' }} />
+              {showLabel && (
+                <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px', transform: 'rotate(0deg)' }}>
+                  {y}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

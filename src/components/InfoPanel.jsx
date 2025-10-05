@@ -94,7 +94,7 @@ export default function InfoPanel({ year, dataType, showLegend }) {
   
     return (
       <div style={{
-        background: 'rgba(30, 41, 59, 0.8)',
+        background: 'transparent',
         padding: '0.5rem',
         borderRadius: '6px',
         color: '#f1f5f9',
